@@ -242,12 +242,41 @@ elif page == "Batch Prediction":
                 # Download predictions
                 csv = df_predictions.to_csv(index=False)
                 st.download_button("📥 Download Predictions", csv, "predictions.csv", "text/csv")
-                
+
                 # Visualization
                 st.subheader("Risk Distribution")
-                fig = px.histogram(df_predictions, x="Risk_Level", color="Risk_Level", 
-                                   color_discrete_map={"Low Risk": "green", "Medium Risk": "yellow", "High Risk": "red"},
-                                   title="Distribution of Risk Levels")
+
+                # 1. Pre-aggregate and reindex to guarantee all categories exist in order
+                risk_counts = (
+                    df_predictions["Risk_Level"]
+                    .value_counts()
+                    .reindex(["Low Risk", "Medium Risk", "High Risk"], fill_value=0)
+                    .reset_index()
+                )
+                risk_counts.columns = ["Risk_Level", "Count"]
+
+                # 2. Use px.bar with a safe color map list or dictionary matching the rows
+                fig = px.bar(
+                    risk_counts, 
+                    x="Risk_Level", 
+                    y="Count", 
+                    color="Risk_Level", 
+                    color_discrete_sequence={
+                        "Low Risk": "#2ecc71",     # Clean Green
+                        "Medium Risk": "#f1c40f",  # Vibrant Yellow
+                        "High Risk": "#e74c3c"     # Soft Red
+                    },
+                    title="Distribution of Risk Levels",
+                    text_auto=True                 # Adds numerical labels automatically to bars
+                )
+
+                # 3. Clean up the layout
+                fig.update_layout(
+                    xaxis_title="",
+                    yaxis_title="Number of Employees",
+                    showlegend=False
+                )
+
                 st.plotly_chart(fig, use_container_width=True)
                 
         except Exception as e:
@@ -326,7 +355,6 @@ elif page == "Model Comparison":
     st.plotly_chart(fig_features, use_container_width=True)
 
 # Footer
-st.divider()
 st.markdown("""
 ---
 **Employee Attrition Prediction System** | Built with Streamlit, Scikit-learn, XGBoost, and Plotly
